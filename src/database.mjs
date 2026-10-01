@@ -36,5 +36,10 @@ db.exec(`
   FOREIGN KEY (capture_id) REFERENCES captures(id)
 );
 
+CREATE TABLE IF NOT EXISTS pending_file_deletions (
+  storage_name TEXT PRIMARY KEY NOT NULL,
+  created_at TEXT NOT NULL
+);
+
 `);
 

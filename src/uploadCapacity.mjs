@@ -41,7 +41,17 @@ export async function acquireUploadCapacity() {
     let usedBytes = 0;
 
     for (const name of entries) {
-      const info = await lstat(path.join(uploadDirectory, name));
+      let info;
+
+      try {
+        info = await lstat(path.join(uploadDirectory, name));
+      } catch (error) {
+        if (error.code === "ENOENT") {
+          continue;
+        }
+
+        throw error;
+      }
 
       if (!info.isFile()) {
         throw new Error(

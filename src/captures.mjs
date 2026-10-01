@@ -8,9 +8,12 @@ import { validateCaptureHeader } from "./validateCaptureHeader.mjs";
 import {
   saveCapture,
   getCapture,
-  listRecentCaptures
+  listRecentCaptures,
+  prepareCaptureDeletion
 } from "./captureStore.mjs";
 import { validatePagination } from "./pagination.mjs";
+import { isCaptureBeingAnalyzed } from "./analysisJobs.mjs";
+import { cleanPendingFile } from "./fileCleanup.mjs";
 
 export { getCapture };
 
@@ -140,4 +143,46 @@ capturesRouter.get("/:id", (req, res) => {
     sizeBytes: capture.sizeBytes,
     createdAt: capture.createdAt
   });
+});
+
+capturesRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const captureId = req.params.id;
+
+    if (isCaptureBeingAnalyzed(captureId)) {
+      return res.status(409).json({
+        error: "This capture is being analyzed. Try again when it finishes."
+      });
+    }
+
+    const deletion = prepareCaptureDeletion(captureId);
+
+    if (deletion.status === "not_found") {
+      return res.status(404).json({
+        error: "Capture not found."
+      });
+    }
+
+    if (deletion.status === "busy") {
+      return res.status(409).json({
+        error: "This capture has a running analysis."
+      });
+    }
+
+    try {
+      await cleanPendingFile(deletion.storageName);
+    } catch (error) {
+      console.error("Capture file cleanup failed:", error);
+
+      return res.status(202).json({
+        captureId,
+        status: "cleanup_pending",
+        message: "Capture records deleted; uploaded file cleanup is pending."
+      });
+    }
+
+    return res.status(204).end();
+  } catch (error) {
+    next(error);
+  }
 });

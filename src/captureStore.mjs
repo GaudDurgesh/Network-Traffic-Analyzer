@@ -74,3 +74,64 @@ export function getCapture(id) {
         filePath: path.join(uploadDirectory, row.storage_name)
     };
 }
+
+const selectRunningAnalysis = db.prepare(`
+  SELECT id
+  FROM analysis_jobs
+  WHERE capture_id = ? AND status = 'running'
+  LIMIT 1
+`);
+
+const queueFileDeletion = db.prepare(`
+  INSERT INTO pending_file_deletions (storage_name, created_at)
+  VALUES (?, ?)
+`);
+
+const deleteCaptureJobs = db.prepare(`
+  DELETE FROM analysis_jobs WHERE capture_id = ?
+`);
+
+const deleteCaptureRecord = db.prepare(`
+  DELETE FROM captures WHERE id = ?
+`);
+
+export function prepareCaptureDeletion(id) {
+  db.exec("BEGIN IMMEDIATE");
+
+  try {
+    const capture = selectCapture.get(id);
+
+    if (capture === undefined) {
+      db.exec("ROLLBACK");
+      return { status: "not_found" };
+    }
+
+    if (selectRunningAnalysis.get(id) !== undefined) {
+      db.exec("ROLLBACK");
+      return { status: "busy" };
+    }
+
+    queueFileDeletion.run(
+      capture.storage_name,
+      new Date().toISOString()
+    );
+
+    deleteCaptureJobs.run(id);
+    deleteCaptureRecord.run(id);
+
+    db.exec("COMMIT");
+
+    return {
+      status: "prepared",
+      storageName: capture.storage_name
+    };
+  } catch (error) {
+    try {
+      db.exec("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Deletion rollback failed:", rollbackError);
+    }
+
+    throw error;
+  }
+}

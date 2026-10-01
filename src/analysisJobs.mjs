@@ -8,6 +8,7 @@ import {
 } from "./analysisJobStore.mjs";
 
 let activeJobId = null;
+let activeCaptureId = null;
 
 export function createAnalysisJob(capturePath, captureId) {
   if (activeJobId !== null) {
@@ -26,6 +27,7 @@ export function createAnalysisJob(capturePath, captureId) {
 
   saveAnalysisJob(job);
   activeJobId = job.id;
+  activeCaptureId = captureId;
 
   void runAnalysis(job.id, capturePath);
 
@@ -61,9 +63,14 @@ async function runAnalysis(jobId, capturePath) {
     }
   } finally {
     activeJobId = null;
+    activeCaptureId = null;
   }
 }
 
 export function getAnalysisJob(id) {
   return findAnalysisJob(id);
+}
+
+export function isCaptureBeingAnalyzed(captureId) {
+  return activeCaptureId === captureId;
 }
