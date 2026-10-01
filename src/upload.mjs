@@ -3,7 +3,7 @@ import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 
-const uploadDirectory = path.join(
+export const uploadDirectory = path.join(
   import.meta.dirname,
   "..",
   "captures",
@@ -11,6 +11,8 @@ const uploadDirectory = path.join(
 );
 
 mkdirSync(uploadDirectory, { recursive: true });
+
+export const maxCaptureBytes = 10 * 1024 * 1024;
 
 const storage = multer.diskStorage({
   destination: uploadDirectory,
@@ -24,7 +26,7 @@ const upload = multer({
   storage,
 
   limits: {
-    fileSize: 10 * 1024 * 1024,
+    fileSize: maxCaptureBytes,
     files: 1,
     fields: 0,
     parts: 1

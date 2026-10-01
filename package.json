@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node analyze.mjs",
     "server": "node src/server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "dev": "node --watch src/server.mjs"
   },
   "keywords": [],
   "author": "",

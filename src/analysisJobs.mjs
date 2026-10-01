@@ -1,23 +1,22 @@
 import { randomUUID } from "node:crypto";
 import { analyzeCapture } from "./analyzeCapture.mjs";
-
-const jobs = new Map();
-const maxStoredJobs = 20;
+import {
+  saveAnalysisJob,
+  completeAnalysisJob,
+  failAnalysisJob,
+  findAnalysisJob
+} from "./analysisJobStore.mjs";
 
 let activeJobId = null;
 
-export function createAnalysisJob(capturePath) {
+export function createAnalysisJob(capturePath, captureId) {
   if (activeJobId !== null) {
     return null;
   }
 
-  while (jobs.size >= maxStoredJobs) {
-    const oldestId = jobs.keys().next().value;
-    jobs.delete(oldestId);
-  }
-
   const job = {
     id: randomUUID(),
+    captureId,
     status: "running",
     createdAt: new Date().toISOString(),
     finishedAt: null,
@@ -25,38 +24,46 @@ export function createAnalysisJob(capturePath) {
     error: null
   };
 
-  jobs.set(job.id, job);
+  saveAnalysisJob(job);
   activeJobId = job.id;
 
-  analyzeCapture(capturePath)
-    .then((result) => {
-      // Keep process diagnostics in server logs.
-      if (result.diagnostics) {
-        console.warn(`[Analysis ${job.id}]`, result.diagnostics);
-      }
-
-      job.result = {
-        summary: result.summary,
-        preview: result.preview,
-        samples: result.samples
-      };
-
-      job.status = "completed";
-    })
-    .catch((error) => {
-      console.error(`[Analysis ${job.id}]`, error.message);
-
-      job.status = "failed";
-      job.error = "Analysis failed. Check the server logs for details.";
-    })
-    .finally(() => {
-      job.finishedAt = new Date().toISOString();
-      activeJobId = null;
-    });
+  void runAnalysis(job.id, capturePath);
 
   return job;
 }
 
+async function runAnalysis(jobId, capturePath) {
+  try {
+    const result = await analyzeCapture(capturePath);
+
+    if (result.diagnostics) {
+      console.warn(`[Analysis ${jobId}]`, result.diagnostics);
+    }
+
+    completeAnalysisJob(jobId, {
+      summary: result.summary,
+      preview: result.preview,
+      samples: result.samples
+    });
+  } catch (error) {
+    console.error(`[Analysis ${jobId}]`, error);
+
+    try {
+      failAnalysisJob(
+        jobId,
+        "Analysis failed. Check the server logs for details."
+      );
+    } catch (storageError) {
+      console.error(
+        `[Analysis ${jobId}] Could not save failure status:`,
+        storageError
+      );
+    }
+  } finally {
+    activeJobId = null;
+  }
+}
+
 export function getAnalysisJob(id) {
-  return jobs.get(id) ?? null;
+  return findAnalysisJob(id);
 }

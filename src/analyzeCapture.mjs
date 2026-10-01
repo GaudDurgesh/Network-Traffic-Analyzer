@@ -3,7 +3,13 @@ import { spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { parsePacketLine } from "./packetParser.mjs";
 
-const tsharkPath = "C:\\Program Files\\Wireshark\\tshark.exe";
+const tsharkPath =
+  process.env.TSHARK_PATH ||
+  (process.platform === "win32"
+    ? "C:\\Program Files\\Wireshark\\tshark.exe"
+    : "/usr/bin/tshark");
+
+    
 const timeoutMs = 60_000;
 const previewLimit = 10;
 
