@@ -1,12 +1,11 @@
 import { mkdirSync } from "node:fs";
-import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-
-const dataDirectory = path.join(import.meta.dirname, "..", "data");
+import {
+  dataDirectory,
+  databasePath
+} from "./storagePaths.mjs";
 
 mkdirSync(dataDirectory, { recursive: true });
-
-const databasePath = path.join(dataDirectory, "analyzer.sqlite");
 
 export const db = new DatabaseSync(databasePath);
 
@@ -25,21 +24,19 @@ db.exec(`
   );
 
   CREATE TABLE IF NOT EXISTS analysis_jobs (
-  id TEXT PRIMARY KEY NOT NULL,
-  capture_id TEXT NOT NULL,
-  status TEXT NOT NULL
-    CHECK (status IN ('running', 'completed', 'failed')),
-  created_at TEXT NOT NULL,
-  finished_at TEXT,
-  result_json TEXT,
-  error TEXT,
-  FOREIGN KEY (capture_id) REFERENCES captures(id)
-);
+    id TEXT PRIMARY KEY NOT NULL,
+    capture_id TEXT NOT NULL,
+    status TEXT NOT NULL
+      CHECK (status IN ('running', 'completed', 'failed')),
+    created_at TEXT NOT NULL,
+    finished_at TEXT,
+    result_json TEXT,
+    error TEXT,
+    FOREIGN KEY (capture_id) REFERENCES captures(id)
+  );
 
-CREATE TABLE IF NOT EXISTS pending_file_deletions (
-  storage_name TEXT PRIMARY KEY NOT NULL,
-  created_at TEXT NOT NULL
-);
-
+  CREATE TABLE IF NOT EXISTS pending_file_deletions (
+    storage_name TEXT PRIMARY KEY NOT NULL,
+    created_at TEXT NOT NULL
+  );
 `);
-

@@ -1,12 +1,6 @@
 import path from "node:path";
 import { db } from "./database.mjs";
-
-const uploadDirectory = path.join(
-    import.meta.dirname,
-    "..",
-    "captures",
-    "uploads"
-);
+import { uploadDirectory } from "./storagePaths.mjs";
 
 const insertCapture = db.prepare(`
   INSERT INTO captures (

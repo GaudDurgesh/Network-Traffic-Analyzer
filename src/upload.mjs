@@ -2,13 +2,9 @@ import multer from "multer";
 import path from "node:path";
 import { mkdirSync } from "node:fs";
 import { randomUUID } from "node:crypto";
+import { uploadDirectory } from "./storagePaths.mjs";
 
-export const uploadDirectory = path.join(
-  import.meta.dirname,
-  "..",
-  "captures",
-  "uploads"
-);
+export { uploadDirectory };
 
 mkdirSync(uploadDirectory, { recursive: true });
 

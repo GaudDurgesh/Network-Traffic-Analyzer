@@ -1,7 +1,7 @@
 import path from "node:path";
 import { unlink } from "node:fs/promises";
 import { db } from "./database.mjs";
-import { uploadDirectory } from "./upload.mjs";
+import { uploadDirectory } from "./storagePaths.mjs";
 
 const selectPendingDeletion = db.prepare(`
   SELECT storage_name
